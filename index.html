@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Magic Lesson 9 — a / an</title>
+
+<!-- ============================================================= -->
+<!--  שיעור 9 אינטראקטיבי — בתאל הקוסמת (a / an)                    -->
+<!--                                                               -->
+<!--  עריכה: רק בבלוק CONFIG למטה ב-<script>.                       -->
+<!--  - youtube: מזהי הסרטונים.                                     -->
+<!--  - questionDelay: כמה שניות מתחילת הסרטון עד שהשאלה עולה.       -->
+<!--  - מורפים: קבצי mp4 מקומיים בתיקיית assets/.                   -->
+<!-- ============================================================= -->
+
+<style>
+  :root{
+    --gold:#e8c170; --gold-bright:#ffe6a3;
+    --bg:#120d1c; --green:#6fcf97; --red:#e57373;
+    --font:'Trebuchet MS','Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:var(--font); color:#fff; overflow:hidden;
+    background:radial-gradient(circle at 50% 0%, #2a1f44 0%, var(--bg) 60%, #0a0710 100%);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #stage{
+    position:relative; width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; padding:18px;
+  }
+
+  /* ---- video ---- */
+  #video-wrap{
+    position:relative;
+    width:min(92vw, calc(64vh * 16/9));
+    aspect-ratio:16/9; background:#000;
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 0 60px rgba(232,193,112,0.18), 0 20px 60px rgba(0,0,0,.6);
+  }
+  #yt-player{position:absolute; inset:0; width:100%; height:100%;}
+  /* shield: blocks YouTube hover-chrome & clicks (we control playback via API) */
+  #yt-shield{display:none; pointer-events:none;} /* בוטל — מאפשרים שליטה מלאה בנגן יוטיוב */
+  #main-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; display:none; z-index:2;}
+  #loading{position:absolute; inset:0; z-index:4; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:20px; background:#000;}
+
+  /* ---- question bar (below video) ---- */
+  #question-bar{
+    width:min(92vw, calc(64vh * 16/9));
+    background:rgba(20,14,32,0.92);
+    border:1px solid rgba(232,193,112,.35);
+    border-radius:14px; padding:16px 20px;
+    display:none; flex-direction:column; align-items:center; gap:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    animation:rise .4s ease;
+  }
+  #question-bar.show{display:flex;}
+  @keyframes rise{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+
+  .q-sentence{font-size:clamp(20px,2.8vw,34px); letter-spacing:.5px;}
+  .q-sentence .blank{color:var(--gold-bright); border-bottom:3px solid var(--gold); padding:0 16px; margin:0 4px;}
+  .answers{display:flex; gap:18px;}
+  .ans-btn{
+    font-family:var(--font); font-size:clamp(22px,3vw,38px); font-weight:bold; color:#1a1226;
+    background:linear-gradient(145deg,var(--gold-bright),var(--gold));
+    border:none; border-radius:14px; width:clamp(110px,14vw,160px); padding:14px 0; cursor:pointer;
+    box-shadow:0 6px 0 #a87b32, 0 10px 24px rgba(0,0,0,.45);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .ans-btn:hover{transform:translateY(-2px);}
+  .ans-btn:active{transform:translateY(4px); box-shadow:0 2px 0 #a87b32;}
+  .ans-btn:disabled{cursor:default;}
+  .ans-btn.correct{background:linear-gradient(145deg,#aef0c4,var(--green)); box-shadow:0 6px 0 #3b8a5b;}
+  .ans-btn.wrong{animation:shake .4s; background:linear-gradient(145deg,#f0a0a0,var(--red)); box-shadow:0 6px 0 #8a3b3b;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-9px);}40%{transform:translateX(9px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+  .feedback{min-height:26px; font-size:clamp(16px,2.1vw,24px); font-weight:bold; direction:rtl;}
+  .feedback.try{color:var(--red); animation:pop .3s ease;}
+  .feedback.good{color:var(--green); animation:pop .3s ease;}
+  @keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  /* ---- full-screen overlays (start / continue / end) ---- */
+  .screen{
+    position:fixed; inset:0; z-index:20; display:none;
+    flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;
+    background:radial-gradient(circle at 50% 0%, #2a1f44 0%, var(--bg) 60%, #0a0710 100%);
+    animation:fadeIn .35s ease;
+  }
+  .screen.show{display:flex;}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  .screen h1{font-size:clamp(28px,4vw,52px); margin:0 0 16px; color:var(--gold-bright); text-shadow:0 2px 18px rgba(232,193,112,.4);}
+  .screen p{font-size:clamp(15px,1.8vw,20px); opacity:.85; margin:0 0 28px; max-width:640px;}
+  .big-btn{
+    font-family:var(--font); font-size:clamp(20px,2.6vw,30px); font-weight:bold; color:#1a1226;
+    background:linear-gradient(145deg,var(--gold-bright),var(--gold));
+    border:none; border-radius:50px; padding:16px 46px; cursor:pointer;
+    box-shadow:0 6px 0 #a87b32, 0 10px 30px rgba(0,0,0,.5); transition:transform .08s ease;
+  }
+  .big-btn:hover{transform:translateY(-2px);}
+  .big-btn:active{transform:translateY(4px);}
+  #cert-img{max-width:90%; max-height:60%; border-radius:14px; box-shadow:0 0 60px rgba(232,193,112,.4); margin-bottom:22px;}
+
+  /* ---- morph popup ---- */
+  #morph-layer{position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(5,3,10,.92); animation:fadeIn .4s ease;}
+  #morph-layer.show{display:flex;}
+  #morph-frame{position:relative; width:90%; max-width:900px; aspect-ratio:16/9; border-radius:18px; overflow:hidden;
+    box-shadow:0 0 0 2px var(--gold), 0 0 80px rgba(232,193,112,.55); animation:spellIn .5s cubic-bezier(.2,1.3,.4,1);}
+  @keyframes spellIn{from{transform:scale(.4) rotate(-6deg);opacity:0;}to{transform:scale(1) rotate(0);opacity:1;}}
+  #morph-video{width:100%; height:100%; object-fit:cover; background:#000;}
+  #morph-caption{position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+    font-size:clamp(26px,4vw,46px); font-weight:bold; color:var(--gold-bright);
+    text-shadow:0 2px 14px #000, 0 0 22px rgba(232,193,112,.6); direction:rtl;}
+
+  /* ---- progress dots ---- */
+  #progress{display:flex; gap:10px; height:14px;}
+  #progress .dot{width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,.22); border:1px solid rgba(232,193,112,.5); transition:all .3s ease;}
+  #progress .dot.done{background:var(--gold);}
+  #progress .dot.active{background:var(--gold-bright); box-shadow:0 0 12px var(--gold); transform:scale(1.3);}
+
+  .spark{position:absolute; width:10px; height:10px; border-radius:50%; background:radial-gradient(circle,#fff,var(--gold) 60%,transparent 70%); pointer-events:none;}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="progress"></div>
+
+  <div id="video-wrap">
+    <div id="yt-player"></div>
+    <div id="yt-shield"></div>
+    <video id="main-video" playsinline></video>
+    <div id="loading">✨ Loading magic…</div>
+  </div>
+
+  <!-- question appears BELOW the video -->
+  <div id="question-bar">
+    <div class="q-sentence" id="q-sentence"></div>
+    <div class="answers">
+      <button class="ans-btn" data-choice="a">a</button>
+      <button class="ans-btn" data-choice="an">an</button>
+    </div>
+    <div class="feedback" id="q-feedback"></div>
+  </div>
+</div>
+
+<!-- start screen -->
+<div class="screen show" id="screen-start">
+  <h1>🪄 Magic English — Lesson 9</h1>
+  <p>Today we practice <b>a</b> and <b>an</b> with Betaal the Wizard.<br>Answer correctly to keep the magic going!</p>
+  <button class="big-btn" id="start-btn">Start the magic ✨</button>
+</div>
+
+<!-- continue screen (after no-question parts) -->
+<div class="screen" id="screen-continue">
+  <button class="big-btn" id="continue-btn">Continue ▶</button>
+</div>
+
+<!-- end / certificate screen -->
+<div class="screen" id="screen-end">
+  <h1>🎓 You did it!</h1>
+  <img id="cert-img" src="assets/certificate.png" alt="Wizard Certificate" />
+  <button class="big-btn" id="restart-btn">Play again 🔁</button>
+</div>
+
+<!-- morph popup -->
+<div id="morph-layer">
+  <div id="morph-frame">
+    <video id="morph-video" playsinline></video>
+    <div id="morph-caption"></div>
+  </div>
+</div>
+
+<script>
+/* =================================================================
+   CONFIG — ערוך כאן בלבד
+   ================================================================= */
+const CONFIG = {
+  youtube: {
+    part1: "kYwMtTFJivQ",  // פתיחה / תיאוריה
+    part2: "6njrZVLSr0Y",  // ball
+    part3: "FJ7jU5wi5L4",  // umbrella
+    part4: "KomxzgTEIXI",  // apple
+    part5: "T65ZL-c-doA",  // cake
+    part6: "flo5f3XYi9w",  // frog
+    part7: "cd_ivLG7NaI",  // elephant (פיל לבד)
+    part8: "QOr4x4iEe7w",  // סיום השיעור (בתאל מסיימת)
+  },
+  questionDelay: 1.5,        // שניות מתחילת הסרטון עד שהשאלה+הכפתורים עולים. כוונן לפי הצורך.
+  morphCaption: "צדקתם!",     // כתובית עברית על סרטון המורף
+  tryAgainText: "Try again 🪄",
+};
+
+/* רצף השלבים.
+   prefix+word = המשפט שמופיע (חייב להתאים למה שבתאל מקריאה).
+   answer = התשובה הנכונה. morph = קובץ מורף מקומי (אופציונלי). */
+// local: קובץ מקומי (מועדף). yt: גיבוי מיוטיוב אם הקובץ המקומי עדיין חסר.
+// at: בשנייה כמה השאלה+הכפתורים עולים (כדאי = כשבתאל מגיעה למשפט). ברירת מחדל: CONFIG.questionDelay.
+// אורכי הקליפים: ball=28.6ש' | umbrella=13.2ש' | apple=5.9 | cake=6.0 | frog=5.7 | elephant=6.2
+const STEPS = [
+  { yt:"part1", q:false },   // פתיחה (ארוך) — נשאר ביוטיוב
+  { local:"assets/clip_ball.mp4",     yt:"part2", q:true, at:23, prefix:"look, it is", word:"ball",     answer:"a",  morph:"assets/morph_ball_umbrella.mp4" },
+  { local:"assets/clip_umbrella.mp4", yt:"part3", q:true, at:8,  prefix:"now, it is",  word:"umbrella", answer:"an" },
+  { local:"assets/clip_apple.mp4",    yt:"part4", q:true, at:1.5,prefix:"look, it is", word:"apple",    answer:"an", morph:"assets/morph_apple_cake.mp4" },
+  { local:"assets/clip_cake.mp4",     yt:"part5", q:true, at:1.5,prefix:"now, it is",  word:"cake",     answer:"a"  },
+  { local:"assets/clip_frog.mp4",     yt:"part6", q:true, at:1.5,prefix:"look, it is", word:"frog",     answer:"a",  morph:"assets/morph_frog_elephant.mp4" },
+  // פיל: אחרי תשובה נכונה מוצג וידאו בתאל המדובב (קומיקס+תעודה) בסגנון מורף — בלי כתובית "צדקתם!"
+  { local:"assets/clip_elephant.mp4", yt:"part7", q:true, at:1.5,prefix:"now, it is",  word:"elephant", answer:"an",
+    morph:{ src:"assets/ending_betaal_comic.mp4", caption:"" } },
+  { yt:"part8", q:false },   // בתאל מסיימת את השיעור
+  { type:"end" },
+];
+
+/* =================================================================
+   ENGINE
+   ================================================================= */
+let player, apiReady=false, current=0;
+let revealed=false, answeredCorrect=false, videoEnded=false, watchTimer=null;
+
+const el = id => document.getElementById(id);
+const qbar=el("question-bar"), qSentence=el("q-sentence"), qFeedback=el("q-feedback");
+const ansBtns=[...document.querySelectorAll(".ans-btn")];
+const loading=el("loading"), shield=el("yt-shield"), mainVideo=el("main-video");
+const morphLayer=el("morph-layer"), morphVideo=el("morph-video"), morphCaption=el("morph-caption");
+const scrStart=el("screen-start"), scrContinue=el("screen-continue"), scrEnd=el("screen-end");
+
+/* progress */
+function buildProgress(){
+  const wrap=el("progress"), total=STEPS.filter(s=>s.q).length;
+  for(let i=0;i<total;i++){ const d=document.createElement("div"); d.className="dot"; wrap.appendChild(d); }
+}
+function updateProgress(){
+  let qIndex=-1;
+  for(let i=0;i<=current && i<STEPS.length;i++){ if(STEPS[i] && STEPS[i].q) qIndex++; }
+  [...document.querySelectorAll("#progress .dot")].forEach((d,i)=>{
+    d.classList.remove("active","done");
+    if(i<qIndex) d.classList.add("done");
+    else if(i===qIndex) d.classList.add("active");
+  });
+}
+
+/* YouTube */
+function loadYouTubeAPI(){ const t=document.createElement("script"); t.src="https://www.youtube.com/iframe_api"; document.head.appendChild(t); }
+window.onYouTubeIframeAPIReady=function(){
+  player=new YT.Player("yt-player",{
+    height:"100%", width:"100%", videoId:"",
+    playerVars:{ rel:0, modestbranding:1, playsinline:1, controls:1, fs:1, iv_load_policy:3 },
+    events:{
+      onReady:()=>{ apiReady=true; loading.style.display="none"; },
+      onStateChange:e=>{ if(e.data===YT.PlayerState.ENDED) onVideoEnded(); }
+    }
+  });
+};
+
+/* flow */
+function startLesson(){ [scrStart,scrContinue,scrEnd].forEach(s=>s.classList.remove("show")); current=0; playStep(); }
+
+function resetStepState(){
+  revealed=false; answeredCorrect=false; videoEnded=false;
+  if(watchTimer){ clearInterval(watchTimer); watchTimer=null; }
+  // clean up local <video>
+  mainVideo.onended=null; mainVideo.ontimeupdate=null; mainVideo.onerror=null;
+  mainVideo.pause();
+  qbar.classList.remove("show");
+  qFeedback.textContent=""; qFeedback.className="feedback";
+  ansBtns.forEach(b=>{ b.disabled=false; b.classList.remove("wrong","correct"); });
+}
+
+function showLocal(){ try{ if(player&&player.pauseVideo) player.pauseVideo(); }catch(e){} mainVideo.style.display="block"; shield.style.display="none"; el("yt-player").style.display="none"; }
+function showYT(){ mainVideo.style.display="none"; shield.style.display="block"; el("yt-player").style.display="block"; }
+
+function playStep(){
+  const step=STEPS[current];
+  resetStepState(); updateProgress();
+  if(!step) return;
+  if(step.type==="end"){ showEnd(); return; }
+
+  // prefer local file; fall back to YouTube on error / if absent
+  if(step.local){ playLocal(step); return; }
+  playYouTube(step);
+}
+
+/* ---- local mp4 ---- */
+function playLocal(step){
+  showLocal();
+  loading.style.display="none";
+  mainVideo.src=step.local;
+  mainVideo.onended=onVideoEnded;
+  mainVideo.ontimeupdate=()=>{ if(step.q && !revealed && mainVideo.currentTime>=(step.at!==undefined?step.at:CONFIG.questionDelay)) revealQuestion(step); };
+  mainVideo.onerror=()=>{ mainVideo.onerror=null; console.warn("local missing, fallback to YouTube:", step.local); playYouTube(step); };
+  const p=mainVideo.play();
+  if(p&&p.catch){ p.catch(()=>{}); }
+}
+
+/* ---- YouTube ---- */
+function playYouTube(step){
+  showYT();
+  const id=CONFIG.youtube[step.yt];
+  if(apiReady && id && !id.startsWith("YT_ID")){
+    loading.style.display="none";
+    player.loadVideoById(id); player.playVideo();
+    if(step.q) startWatchTimer(step);
+  } else {
+    loading.style.display="flex";
+    loading.innerHTML="▶ ("+(step.yt||"?")+" — חסר מקור)<br><span style='font-size:14px;opacity:.7'>לחץ לדמות סיום סרטון</span>";
+    loading.style.cursor="pointer";
+    if(step.q){ revealQuestion(step); }
+    loading.onclick=()=>{ loading.onclick=null; loading.style.cursor="default"; loading.style.display="none"; onVideoEnded(); };
+  }
+}
+
+/* poll currentTime → reveal question at questionDelay (YouTube only) */
+function startWatchTimer(step){
+  const at=(step.at!==undefined?step.at:CONFIG.questionDelay);
+  watchTimer=setInterval(()=>{
+    if(!revealed && player && player.getCurrentTime && player.getCurrentTime()>=at){
+      revealQuestion(step);
+    }
+  },200);
+}
+
+function revealQuestion(step){
+  if(revealed) return;
+  revealed=true;
+  qSentence.innerHTML=`${step.prefix} <span class="blank">?</span> ${step.word}`;
+  qbar.classList.add("show");
+}
+
+function onAnswer(choice, btn){
+  if(answeredCorrect) return;
+  const step=STEPS[current];
+  if(choice===step.answer){
+    answeredCorrect=true;
+    ansBtns.forEach(b=>b.disabled=true);
+    btn.classList.add("correct");
+    qSentence.innerHTML=`${step.prefix} <span class="blank" style="border:none;color:var(--green)">${step.answer}</span> ${step.word}`;
+    qFeedback.textContent="✓"; qFeedback.className="feedback good";
+    sparkBurst();
+    if(videoEnded) proceed();   // video already finished → go now
+    // else: wait for the video to finish on its own
+  } else {
+    qFeedback.textContent=CONFIG.tryAgainText; qFeedback.className="feedback try";
+    btn.classList.add("wrong");
+    setTimeout(()=>btn.classList.remove("wrong"),450);
+  }
+}
+
+function onVideoEnded(){
+  const step=STEPS[current];
+  if(!step) return;
+  videoEnded=true;
+  if(watchTimer){ clearInterval(watchTimer); watchTimer=null; }
+  if(!step.q){ scrContinue.classList.add("show"); return; }   // no-question part
+  if(!revealed) revealQuestion(step);                          // ensure question is visible
+  if(answeredCorrect) proceed();                               // both done → advance
+  // else: wait until they answer correctly
+}
+
+function proceed(){
+  const step=STEPS[current];
+  if(step && step.morph){ playMorph(step.morph); }
+  else advance();
+}
+
+function playMorph(morph){
+  // morph can be a string (path) or an object { src, caption }
+  const src = (typeof morph==="string") ? morph : morph.src;
+  const caption = (typeof morph==="string") ? CONFIG.morphCaption
+                  : (morph.caption!==undefined ? morph.caption : CONFIG.morphCaption);
+  morphCaption.textContent="";            // caption appears partway through
+  morphVideo.src=src;
+  morphLayer.classList.add("show");
+  const showCap=()=>{ if(caption) morphCaption.textContent=caption; };
+  const finish=()=>{
+    morphVideo.removeEventListener("ended",finish);
+    morphLayer.classList.remove("show");
+    morphVideo.pause(); morphVideo.removeAttribute("src"); morphVideo.load();
+    advance();
+  };
+  morphVideo.addEventListener("ended",finish);
+  morphVideo.addEventListener("error",finish,{once:true});
+  morphVideo.addEventListener("loadeddata",()=>setTimeout(showCap,900),{once:true});
+  const p=morphVideo.play();
+  if(p&&p.catch){ p.catch(()=>{ morphVideo.muted=true; morphVideo.play().catch(()=>{}); }); }
+}
+
+function advance(){ current++; playStep(); }
+
+function showEnd(){ qbar.classList.remove("show"); updateProgress(); scrEnd.classList.add("show"); }
+
+function sparkBurst(origin){
+  const wrap=el("video-wrap"), r=(origin||wrap).getBoundingClientRect(), wr=wrap.getBoundingClientRect();
+  const cx=r.left-wr.left+r.width/2, cy=r.top-wr.top+r.height/2;
+  for(let i=0;i<18;i++){
+    const s=document.createElement("div"); s.className="spark"; wrap.appendChild(s);
+    const a=(Math.PI*2/18)*i, d=60+Math.random()*90;
+    s.style.left=cx+"px"; s.style.top=cy+"px";
+    s.animate([{transform:"translate(-50%,-50%) scale(1)",opacity:1},
+      {transform:`translate(calc(-50% + ${Math.cos(a)*d}px), calc(-50% + ${Math.sin(a)*d}px)) scale(0)`,opacity:0}],
+      {duration:700+Math.random()*300,easing:"cubic-bezier(.2,.8,.3,1)"}).onfinish=()=>s.remove();
+  }
+}
+
+/* wire up */
+ansBtns.forEach(b=>b.addEventListener("click",()=>onAnswer(b.dataset.choice,b)));
+el("start-btn").addEventListener("click",startLesson);
+el("continue-btn").addEventListener("click",()=>{ scrContinue.classList.remove("show"); advance(); });
+el("restart-btn").addEventListener("click",startLesson);
+
+buildProgress();
+loadYouTubeAPI();
+</script>
+</body>
+</html>
